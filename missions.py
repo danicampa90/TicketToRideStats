@@ -15,3 +15,14 @@ class ConnectCitiesMission(Mission):
         else:
             return -self.value
             
+class ConnectDistrictsMission(Mission):
+    def __init__(self, city_names, value: int):
+        self.city_names = city_names
+        self.value = value
+
+    def get_value_with_tracks(self, gs):
+        for city_name in self.city_names:    
+            if city_name not in gs.reached_cities:
+                return 0
+        return self.value
+            
