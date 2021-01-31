@@ -1,4 +1,4 @@
-# Ticket to ride python analysis tool
+# Ticket to ride analysis tool
 
 This python script analyzes the ticket to ride maps to find what is the maximum theorethical amout of points one can earn with a specified number of trains.
 
