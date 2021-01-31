@@ -3,7 +3,7 @@ from missions import *
 
 
 def london_board():
-    b = Board()
+    b = Board("london", 17)
     b.add_track(Track("covent", "trafalgar", 1))
     b.add_track(Track("covent", "picadilly", 1))
     b.add_track(Track("covent", "british", 1))

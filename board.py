@@ -2,10 +2,19 @@ from queue import PriorityQueue
 from missions import Mission
 
 class Track:
-    def __init__(self, name1:str, name2:str, length:int):
+    def __init__(self, name1:str, name2:str, length:int, special: object = None):
         self.name1 = name1
         self.name2 = name2
         self.length = length
+        self.specials = []
+        if special is None:
+            self.specials = []
+        elif isinstance(special, str):
+            self.specials = [special]
+        elif isinstance(special, list):
+            self.specials = special
+        else:
+            raise TypeError("Expected a string or a list as 'special' argument")
 
     def __str__(self):
         return self.name1+("-"*self.length)+self.name2
@@ -15,13 +24,19 @@ class Track:
 
 
 class Board:
-    def __init__(self):
+    def __init__(self, name:str, number_of_trains:int):
+        self.name = name
+        self.number_of_trains = number_of_trains
         self.tracks=[]
         self.missions=[]
         self.tracks_in_city={}
         self.tracks_by_length=[None,[],[],[],[],[],[],[],[],[],[]]
         self.min_distance_between_cities={}
+        self.track_scores = {1:1, 2:2, 3:4, 4: 7, 6: 15, 8: 21} # or something like that
         pass
+
+    def set_track_scores(scores):
+        self.track_scores = scores
 
     def add_track(self, track: Track):
         self.tracks.append(track)
@@ -75,14 +90,4 @@ class Board:
             pass
             self.min_distance_between_cities[city] = distances
         pass
-
-    def export_graphviz_map(self, filename):
-        with open(filename,"w") as dotfile:
-            dotfile.write("graph {\n")
-            for track in self.tracks:
-                dotfile.write("  "+track.name1+"--"+track.name2+"[label="+str(track.length)+"];\n")
-            
-            dotfile.write("}")
-            
-
 

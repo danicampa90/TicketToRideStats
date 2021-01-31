@@ -18,7 +18,7 @@ class GameState:
         return GameState(self.board, new_trains_remaining, new_tracks, new_track_points, new_reached_cities)
 
     def assign_points(track:Track):
-        points_dict = {1:1, 2:2, 3:4, 4: 7, 5: 15, 6: 21} # or something like that
+        points_dict = {1:1, 2:2, 3:4, 4: 7, 6: 15, 8: 21} # or something like that
         return points_dict[track.length]
 
     def calculate_total_points(self):

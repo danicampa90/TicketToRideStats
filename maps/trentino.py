@@ -3,7 +3,7 @@ from missions import *
 
 
 def trentino_board():
-    b = Board()
+    b = Board("trentino", 18)
     b.add_track(Track("ala", "riva", 2))
     b.add_track(Track("ala", "rovereto", 2))
     b.add_track(Track("rovereto", "pozza", 1))

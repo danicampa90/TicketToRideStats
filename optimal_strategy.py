@@ -26,7 +26,7 @@ class OptimalStrategyCalculator:
 
         for t in tracks:
             exclude.add(t)
-            if indent <= 4:
+            if indent <= 3:
                 print("  "*indent+"* build "+str(t))
             self.__calculate_recursive(gs.new_with_track_built(t), indent=indent+2, exclude=set(exclude))
 
