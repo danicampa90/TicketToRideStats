@@ -26,8 +26,9 @@ class OptimalStrategyCalculator:
 
         for t in tracks:
             exclude.add(t)
-            if indent <= 3:
-                print("  "*indent+"* build "+str(t))
+            if indent <= 2:
+                print("  "*indent+"* then build "+str(t))
+                pass
             self.__calculate_recursive(gs.new_with_track_built(t), indent=indent+2, exclude=set(exclude))
 
     def calculate_from_state(self, gs:GameState):
@@ -37,7 +38,7 @@ class OptimalStrategyCalculator:
         exclude=set()
         for t in tracks:
             exclude.add(t)
-            print("* build "+str(t))
+            print("* Try building "+str(t))
             self.__calculate_recursive(gs.new_with_track_built(t), indent=2,exclude=set(exclude))
         return self.max_for_routes_gs
 

@@ -1,6 +1,7 @@
 from board import Board, Track
 from missions import *
 
+# ticket to ride europe map data
 def europe_board():
     b = Board("europe", 45)
     b.add_track(Track("edinburgh", "london", 4))

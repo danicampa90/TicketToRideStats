@@ -1,7 +1,7 @@
 from board import Board, Track
 from missions import *
 
-
+# a custom map on trentino (Italy). It's not available publicly(yet?)
 def trentino_board():
     b = Board("trentino", 18)
     b.add_track(Track("ala", "riva", 2))

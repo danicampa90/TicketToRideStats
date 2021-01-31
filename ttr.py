@@ -12,9 +12,20 @@ for boardname in boards():
 
     city_names = list(b.tracks_in_city.keys())
     city_names.sort()
-    print(city_names)
+    print("Cities in",b.name,":",','.join(city_names))
 
-# sfdp -Tpng -o map.png map.dot
-#winning_gs = OptimalStrategyCalculator().calculate_from_board(b, b.number_of_trains)
-#print("Maximum points for all connected routes: "+str(winning_gs))
+
+print("Which map you want to load amongst those?")
+for mapname in boards():
+    print("-", mapname)
+map = input("map name: ")
+b = get_board(map)
+
+print("Usually there are",b.number_of_trains,"trains in this map.")
+print("How many trains do you want to use? Note that anything bigger than 20/25 trains takes a long time (exponentially increasing...).")
+nrtrains = int(input("Number of trains:"))
+print("Calculating...")
+winning_gs = OptimalStrategyCalculator().calculate_from_board(b, nrtrains)
+print("Maximum points can be achieved with these tracks: "+str(winning_gs))
+print("(excluding the longest route bonus, but keeping into account missions etc)")
 
