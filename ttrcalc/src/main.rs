@@ -10,6 +10,18 @@ use gamestate::GameState;
 use parser::parse_routes;
 use route::Route;
 use std::iter;
+use task_system::{Work, WorkProcessor};
+
+#[derive(Clone)]
+struct MyWorkProcessor {}
+impl WorkProcessor for MyWorkProcessor {
+    fn process(self: &Self, w: Work) -> Vec<Work> {
+        match w {
+            Work::PrintDebug(i) => println!("{}", i),
+        }
+        vec![]
+    }
+}
 
 fn main() {
     let mut game = Board::new(20);
@@ -26,5 +38,11 @@ fn main() {
     println!("GameState: {:?}", gamestate);
 
     let mut scheduler = task_system::Scheduler::new(2);
-    scheduler.run(&|scheduler: &task_system::Scheduler, w: task_system::Work| vec![w])
+    scheduler.push_task(Work::PrintDebug(1));
+    scheduler.push_task(Work::PrintDebug(2));
+    scheduler.push_task(Work::PrintDebug(3));
+    scheduler.push_task(Work::PrintDebug(4));
+    scheduler.push_task(Work::PrintDebug(5));
+    scheduler.push_task(Work::PrintDebug(6));
+    scheduler.run(&MyWorkProcessor {})
 }
