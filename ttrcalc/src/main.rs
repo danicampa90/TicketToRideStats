@@ -10,13 +10,17 @@ use gamestate::GameState;
 use parser::parse_routes;
 use route::Route;
 use std::iter;
-use task_system::{Work, WorkProcessor};
+use task_system::WorkProcessor;
 
 #[derive(Clone)]
 struct MyWorkProcessor {
     id: usize,
 }
-impl WorkProcessor for MyWorkProcessor {
+
+pub enum Work {
+    PrintDebug(i32),
+}
+impl WorkProcessor<Work> for MyWorkProcessor {
     fn process(self: &Self, w: Work) -> Vec<Work> {
         match w {
             Work::PrintDebug(i) => {

@@ -2,28 +2,32 @@ use crossbeam::atomic::AtomicCell;
 use crossbeam::deque::{Injector, Stealer, Worker};
 use crossbeam_utils::thread;
 use std::iter;
-use std::sync::Arc;
 
-pub enum Work {
-    PrintDebug(i32),
-}
-
-pub trait WorkProcessor {
+pub trait WorkProcessor<T>
+where
+    T: Send,
+{
     fn set_id(&mut self, id: usize);
     fn sleep(&self, oth: usize);
     fn resume(&self, oth: usize);
     fn done(&self);
-    fn process(&self, w: Work) -> Vec<Work>;
+    fn process(&self, w: T) -> Vec<T>;
 }
 
-pub struct Scheduler {
-    global: Injector<Work>,
+pub struct Scheduler<T>
+where
+    T: Send,
+{
+    global: Injector<T>,
     waiting_workers: AtomicCell<usize>,
     nr_workers: usize,
 }
 
-impl Scheduler {
-    pub fn new(nr_workers: usize) -> Scheduler {
+impl<T> Scheduler<T>
+where
+    T: Send,
+{
+    pub fn new(nr_workers: usize) -> Scheduler<T> {
         return Scheduler {
             global: Injector::new(),
             waiting_workers: AtomicCell::from(0),
@@ -31,7 +35,7 @@ impl Scheduler {
         };
     }
 
-    pub fn run<T: WorkProcessor + Clone + Send>(&mut self, processor: &T) {
+    pub fn run<TProc: WorkProcessor<T> + Clone + Send>(&mut self, processor: &TProc) {
         let mut stealers = vec![];
         let mut workers = vec![];
         for _index in 0..self.nr_workers {
@@ -54,11 +58,11 @@ impl Scheduler {
         .unwrap();
     }
 
-    pub fn single_thread<T: WorkProcessor>(
+    pub fn single_thread<TProc: WorkProcessor<T>>(
         &self,
-        function: T,
-        worker: Worker<Work>,
-        stealers: &Vec<Stealer<Work>>,
+        function: TProc,
+        worker: Worker<T>,
+        stealers: &Vec<Stealer<T>>,
     ) {
         // if we are done, then exit
         let backoff = crossbeam::utils::Backoff::new();
@@ -83,7 +87,7 @@ impl Scheduler {
         }
     }
 
-    pub fn push_tasks(&self, work: Vec<Work>, worker: &Worker<Work>) {
+    pub fn push_tasks(&self, work: Vec<T>, worker: &Worker<T>) {
         if worker.len() < 50 {
             for w in work.into_iter() {
                 worker.push(w);
@@ -95,7 +99,7 @@ impl Scheduler {
         }
     }
 
-    pub fn push_task(&self, w: Work) {
+    pub fn push_task(&self, w: T) {
         self.global.push(w);
     }
 
@@ -103,7 +107,7 @@ impl Scheduler {
         false
     }
 
-    fn pop_task(&self, local: &Worker<Work>, stealers: &Vec<Stealer<Work>>) -> Option<Work> {
+    fn pop_task(&self, local: &Worker<T>, stealers: &Vec<Stealer<T>>) -> Option<T> {
         // Pop a task from the local queue, if not empty.
         local.pop().or_else(|| {
             // Otherwise, we need to look for a task elsewhere.
@@ -119,8 +123,5 @@ impl Scheduler {
             // Extract the stolen task, if there is one.
             .and_then(|s| s.success())
         })
-    }
-    fn has_tasks(&self, local: &Worker<Work>) -> bool {
-        return !local.is_empty() || !self.global.is_empty();
     }
 }
