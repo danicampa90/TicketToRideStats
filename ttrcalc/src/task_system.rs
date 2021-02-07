@@ -1,3 +1,4 @@
+use crossbeam::atomic::AtomicCell;
 use crossbeam::deque::{Injector, Stealer, Worker};
 use crossbeam_utils::thread;
 use std::iter;
@@ -8,11 +9,16 @@ pub enum Work {
 }
 
 pub trait WorkProcessor {
-    fn process(self: &Self, w: Work) -> Vec<Work>;
+    fn set_id(&mut self, id: usize);
+    fn sleep(&self, oth: usize);
+    fn resume(&self, oth: usize);
+    fn done(&self);
+    fn process(&self, w: Work) -> Vec<Work>;
 }
 
 pub struct Scheduler {
     global: Injector<Work>,
+    waiting_workers: AtomicCell<usize>,
     nr_workers: usize,
 }
 
@@ -20,6 +26,7 @@ impl Scheduler {
     pub fn new(nr_workers: usize) -> Scheduler {
         return Scheduler {
             global: Injector::new(),
+            waiting_workers: AtomicCell::from(0),
             nr_workers: nr_workers,
         };
     }
@@ -32,13 +39,16 @@ impl Scheduler {
             stealers.push(worker.stealer());
             workers.push(worker);
         }
+        let mut worker_id = 0;
         thread::scope(|s| {
             for worker in workers.into_iter() {
-                let proc = processor.clone();
+                let mut proc = processor.clone();
+                proc.set_id(worker_id);
 
                 s.spawn(|_| {
                     self.single_thread(proc, worker, &stealers);
                 });
+                worker_id += 1;
             }
         })
         .unwrap();
@@ -50,9 +60,26 @@ impl Scheduler {
         worker: Worker<Work>,
         stealers: &Vec<Stealer<Work>>,
     ) {
-        while let Some(x) = self.pop_task(&worker, stealers) {
-            let w = function.process(x);
-            self.push_tasks(w, &worker)
+        // if we are done, then exit
+        let backoff = crossbeam::utils::Backoff::new();
+        loop {
+            // process as much work as possible
+            while let Some(x) = self.pop_task(&worker, stealers) {
+                let w = function.process(x);
+                self.push_tasks(w, &worker)
+            }
+            // mark as waiting, wait a bit and then wakeup
+            let other_waiting_threads = self.waiting_workers.fetch_add(1);
+            function.sleep(other_waiting_threads);
+            backoff.snooze();
+            let other_waiting_threads = self.waiting_workers.fetch_sub(1);
+            function.resume(other_waiting_threads);
+            // if everybody was waiting then we are done. Exit
+            if other_waiting_threads == self.nr_workers {
+                self.waiting_workers.fetch_add(1);
+                function.done();
+                return;
+            }
         }
     }
 
@@ -92,5 +119,8 @@ impl Scheduler {
             // Extract the stolen task, if there is one.
             .and_then(|s| s.success())
         })
+    }
+    fn has_tasks(&self, local: &Worker<Work>) -> bool {
+        return !local.is_empty() || !self.global.is_empty();
     }
 }

@@ -13,13 +13,39 @@ use std::iter;
 use task_system::{Work, WorkProcessor};
 
 #[derive(Clone)]
-struct MyWorkProcessor {}
+struct MyWorkProcessor {
+    id: usize,
+}
 impl WorkProcessor for MyWorkProcessor {
     fn process(self: &Self, w: Work) -> Vec<Work> {
         match w {
-            Work::PrintDebug(i) => println!("{}", i),
+            Work::PrintDebug(i) => {
+                println!("[{}]: {}", self.id, i);
+                return if i < 20 {
+                    vec![Work::PrintDebug(i + 1), Work::PrintDebug(i + 2)]
+                } else {
+                    vec![]
+                };
+            }
         }
-        vec![]
+    }
+    fn set_id(&mut self, id: usize) {
+        self.id = id
+    }
+    fn done(&self) {
+        println!("Thread {} is done", self.id);
+    }
+    fn sleep(&self, oth: usize) {
+        println!(
+            "Thread {} is going to sleep. There are {} other threads sleeping",
+            self.id, oth
+        );
+    }
+    fn resume(&self, oth: usize) {
+        println!(
+            "Thread {} is waking up. There are {} other threads sleeping.",
+            self.id, oth
+        );
     }
 }
 
@@ -37,12 +63,8 @@ fn main() {
     let gamestate = gamestate.new_state_with_route(1);
     println!("GameState: {:?}", gamestate);
 
-    let mut scheduler = task_system::Scheduler::new(2);
+    let mut scheduler = task_system::Scheduler::new(16);
     scheduler.push_task(Work::PrintDebug(1));
-    scheduler.push_task(Work::PrintDebug(2));
-    scheduler.push_task(Work::PrintDebug(3));
-    scheduler.push_task(Work::PrintDebug(4));
-    scheduler.push_task(Work::PrintDebug(5));
-    scheduler.push_task(Work::PrintDebug(6));
-    scheduler.run(&MyWorkProcessor {})
+    scheduler.run(&MyWorkProcessor { id: 0 });
+    println!("Done");
 }
