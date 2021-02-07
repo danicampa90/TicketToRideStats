@@ -1,57 +1,16 @@
 mod board;
+mod debug_processor;
 mod gamestate;
+mod mostpoint_processor;
 mod parser;
 mod route;
 mod task_system;
 
 use board::Board;
-use crossbeam::deque::{Injector, Stealer, Worker}; // https://docs.rs/crossbeam/0.8.0/crossbeam/deque/index.html
+use debug_processor::{DebugWork, DebugWorkProcessor};
 use gamestate::GameState;
+use mostpoint_processor::{MostPointWorkProcessor, Work};
 use parser::parse_routes;
-use route::Route;
-use std::iter;
-use task_system::WorkProcessor;
-
-#[derive(Clone)]
-struct MyWorkProcessor {
-    id: usize,
-}
-
-pub enum Work {
-    PrintDebug(i32),
-}
-impl WorkProcessor<Work> for MyWorkProcessor {
-    fn process(self: &Self, w: Work) -> Vec<Work> {
-        match w {
-            Work::PrintDebug(i) => {
-                println!("[{}]: {}", self.id, i);
-                return if i < 20 {
-                    vec![Work::PrintDebug(i + 1), Work::PrintDebug(i + 2)]
-                } else {
-                    vec![]
-                };
-            }
-        }
-    }
-    fn set_id(&mut self, id: usize) {
-        self.id = id
-    }
-    fn done(&self) {
-        println!("Thread {} is done", self.id);
-    }
-    fn sleep(&self, oth: usize) {
-        println!(
-            "Thread {} is going to sleep. There are {} other threads sleeping",
-            self.id, oth
-        );
-    }
-    fn resume(&self, oth: usize) {
-        println!(
-            "Thread {} is waking up. There are {} other threads sleeping.",
-            self.id, oth
-        );
-    }
-}
 
 fn main() {
     let mut game = Board::new(20);
@@ -66,9 +25,15 @@ fn main() {
     let gamestate = GameState::new(&game);
     let gamestate = gamestate.new_state_with_route(1);
     println!("GameState: {:?}", gamestate);
-
     let mut scheduler = task_system::Scheduler::new(16);
-    scheduler.push_task(Work::PrintDebug(1));
-    scheduler.run(&MyWorkProcessor { id: 0 });
+    scheduler.push_task(Work::explore(gamestate));
+    let processor = MostPointWorkProcessor::new(&game);
+    scheduler.run(&processor);
+    /* Debug */
+    /*
+    let mut scheduler = task_system::Scheduler::new(16);
+    scheduler.push_task(DebugWork::PrintDebug(1));
+    scheduler.run(&DebugWorkProcessor::new());
     println!("Done");
+    */
 }
