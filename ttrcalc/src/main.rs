@@ -14,8 +14,9 @@ use parser::parse_routes;
 
 fn main() {
     let mut game = Board::new(20);
+    //parse_routes("debug_tracks.csv", &mut game);
     parse_routes("london_tracks.csv", &mut game);
-
+    /*
     let routes: Vec<String> = game
         .routes_from_city(game.city_id("baker").unwrap())
         .map(|route| game.fmt_route(route))
@@ -23,10 +24,11 @@ fn main() {
     println!("{:?}", routes);
 
     let gamestate = GameState::new(&game);
-    let gamestate = gamestate.new_state_with_route(1);
+    let gamestate = gamestate.new_state_with_route_id(1, &vec![]);
     println!("GameState: {:?}", gamestate);
+    return;*/
     let mut scheduler = task_system::Scheduler::new(16);
-    scheduler.push_task(Work::explore(gamestate));
+    scheduler.push_task(Work::Start);
     let processor = MostPointWorkProcessor::new(&game);
     scheduler.run(&processor);
     /* Debug */

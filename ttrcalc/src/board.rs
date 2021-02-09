@@ -17,6 +17,10 @@ impl Board {
         }
     }
 
+    pub fn nr_trains(&self) -> u32 {
+        self.nr_trains
+    }
+
     pub fn add_route(&mut self, route: Route) {
         let index = self.routes.len();
         self.route_from_cities[route.city1].push(index);
@@ -26,10 +30,16 @@ impl Board {
     pub fn routes(&self) -> &Vec<Route> {
         &self.routes
     }
+    pub fn route_from_id(&self, id: usize) -> &Route {
+        &self.routes[id]
+    }
     pub fn routes_from_city(&self, city: usize) -> impl Iterator<Item = &Route> {
         self.route_from_cities[city]
             .iter()
             .map(move |index| &self.routes[*index])
+    }
+    pub fn route_ids_from_city(&self, city: usize) -> &Vec<usize> {
+        &self.route_from_cities[city]
     }
     pub fn nr_routes(&self) -> usize {
         self.routes.len()

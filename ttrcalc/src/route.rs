@@ -3,6 +3,7 @@ pub struct Route {
     pub city1: usize,
     pub city2: usize,
     pub tracks: Vec<Vec<TrackType>>,
+    pub tracks_len: usize,
 }
 
 impl Route {
@@ -16,6 +17,7 @@ impl Route {
         Route {
             city1: city1,
             city2: city2,
+            tracks_len: tracks[0].len(),
             tracks: tracks,
         }
     }
