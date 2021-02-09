@@ -13,29 +13,27 @@ use mostpoint_processor::{MostPointWorkProcessor, Work};
 use parser::parse_routes;
 
 fn main() {
-    let mut game = Board::new(20);
+    let mut game = Board::new(40);
     //parse_routes("debug_tracks.csv", &mut game);
     parse_routes("london_tracks.csv", &mut game);
-    /*
-    let routes: Vec<String> = game
-        .routes_from_city(game.city_id("baker").unwrap())
-        .map(|route| game.fmt_route(route))
-        .collect();
-    println!("{:?}", routes);
 
-    let gamestate = GameState::new(&game);
-    let gamestate = gamestate.new_state_with_route_id(1, &vec![]);
-    println!("GameState: {:?}", gamestate);
-    return;*/
     let mut scheduler = task_system::Scheduler::new(16);
     scheduler.push_task(Work::Start);
     let processor = MostPointWorkProcessor::new(&game);
     scheduler.run(&processor);
-    /* Debug */
-    /*
-    let mut scheduler = task_system::Scheduler::new(16);
-    scheduler.push_task(DebugWork::PrintDebug(1));
-    scheduler.run(&DebugWorkProcessor::new());
-    println!("Done");
-    */
+
+    let (max_score, max_state) = processor.into_maximum();
+    println!("Maximum points: {}", max_score);
+    explain_state(&max_state);
+}
+
+fn explain_state<'a>(state: &GameState<'a>) {
+    println!("Built routes:");
+    let board = state.board();
+    for routeid in state.built_routes_list() {
+        let route = board.route_from_id(routeid);
+        let city1_name = board.city_name(route.city1);
+        let city2_name = board.city_name(route.city2);
+        println!(" - {}--[{}]-->{}", city1_name, route.tracks_len, city2_name);
+    }
 }

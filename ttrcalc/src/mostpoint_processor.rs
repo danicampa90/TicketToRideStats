@@ -24,24 +24,28 @@ impl<'a> MostPointWorkProcessor<'a> {
     }
     fn score_tracks(&self, state: &GameState) -> u32 {
         let mut points = 0;
-        for (route_id, is_built) in state.built_routes().iter().enumerate() {
-            if *is_built {
-                let len = self.board.route_from_id(route_id).tracks_len;
-                points += match len {
-                    1 => 1,
-                    2 => 2,
-                    3 => 4,
-                    4 => 7,
-                    5 => 10,
-                    6 => 21,
-                    _ => panic!("Invalid lenght"),
-                }
+        for route_id in state.built_routes_list() {
+            let len = self.board.route_from_id(route_id).tracks_len;
+            points += match len {
+                1 => 1,
+                2 => 2,
+                3 => 4,
+                4 => 7,
+                5 => 10,
+                6 => 21,
+                _ => panic!("Invalid length"),
             }
         }
         return points;
     }
     fn score_missions(&self, state: &GameState) -> u32 {
         0
+    }
+
+    pub fn into_maximum(self) -> (u32, GameState<'a>) {
+        let max = Arc::<RwLock<(u32, GameState<'a>)>>::try_unwrap(self.maximum_points).unwrap();
+        return max.into_inner().unwrap();
+        //return self.maximum_points.try_unwrap();
     }
 }
 
@@ -61,7 +65,7 @@ impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
     fn process(self: &Self, w: Work<'a>) -> Vec<Work<'a>> {
         let mut tasks = vec![];
         if self.log {
-            println!("{:?}", w);
+            println!(">{:?}", w);
         }
         match w {
             Work::Start => {
@@ -81,22 +85,26 @@ impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
             Work::Explore(gs) => {
                 let mut routes_to_ignore = vec![];
                 let neighbors = gs.neighboring_routes();
-                if neighbors.len() == 0 {
+                let mut has_explored = false;
+                for route in neighbors {
+                    let new_state = gs.new_state_with_route_id(route, &routes_to_ignore);
+                    if self.log {
+                        println!("... {} -> {:?}", route, new_state);
+                    }
+                    if new_state.is_ok() {
+                        has_explored = true;
+                        if self.log {
+                            println!("... Build {} and enqueue {:?}", route, new_state);
+                        }
+                        tasks.push(Work::explore(new_state.unwrap()));
+                    }
+                    routes_to_ignore.push(route);
+                }
+                if !has_explored {
                     if self.log {
                         println!("... Needs scoring {:?}", gs);
                     }
                     tasks.push(Work::EvaluateScore(gs))
-                } else {
-                    for route in neighbors {
-                        let new_state = gs.new_state_with_route_id(route, &routes_to_ignore);
-                        if new_state.is_ok() {
-                            if self.log {
-                                println!("... Build {} and enqueue {:?}", route, new_state);
-                            }
-                            tasks.push(Work::explore(new_state.unwrap()));
-                        }
-                        routes_to_ignore.push(route);
-                    }
                 }
             }
             Work::EvaluateScore(gs) => {

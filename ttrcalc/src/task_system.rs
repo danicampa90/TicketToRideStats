@@ -39,7 +39,7 @@ where
         let mut stealers = vec![];
         let mut workers = vec![];
         for _index in 0..self.nr_workers {
-            let worker = Worker::new_fifo();
+            let worker = Worker::new_lifo();
             stealers.push(worker.stealer());
             workers.push(worker);
         }
