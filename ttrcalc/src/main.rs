@@ -12,10 +12,13 @@ use gamestate::GameState;
 use mostpoint_processor::{MostPointWorkProcessor, Work};
 use parser::parse_routes;
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 fn main() {
-    let mut game = Board::new(40);
+    let mut game = Board::new(45);
     //parse_routes("debug_tracks.csv", &mut game);
-    parse_routes("london_tracks.csv", &mut game);
+    parse_routes("europe_tracks.csv", &mut game);
 
     let mut scheduler = task_system::Scheduler::new(16);
     scheduler.push_task(Work::Start);

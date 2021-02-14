@@ -88,7 +88,7 @@ where
     }
 
     pub fn push_tasks(&self, work: Vec<T>, worker: &Worker<T>) {
-        if worker.len() < 50 {
+        if worker.len() < 1000 {
             for w in work.into_iter() {
                 worker.push(w);
             }

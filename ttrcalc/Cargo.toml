@@ -9,3 +9,9 @@ edition = "2018"
 [dependencies]
 crossbeam = "0.8"
 crossbeam-utils = "0.8"
+mimalloc = { version = "0.1.17", default-features = false }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"

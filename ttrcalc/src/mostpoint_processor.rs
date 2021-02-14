@@ -1,6 +1,7 @@
 use crate::board::Board;
 use crate::gamestate::GameState;
 use crate::task_system::WorkProcessor;
+use crossbeam::atomic::AtomicCell;
 
 use std::cell::RefCell;
 use std::sync::{Arc, RwLock};
@@ -11,6 +12,8 @@ pub struct MostPointWorkProcessor<'a> {
     id: usize,
     log: bool,
     maximum_points: Arc<RwLock<(u32, GameState<'a>)>>,
+    exploration_steps: Arc<AtomicCell<u64>>,
+    scoring_steps: Arc<AtomicCell<u64>>,
 }
 
 impl<'a> MostPointWorkProcessor<'a> {
@@ -20,6 +23,8 @@ impl<'a> MostPointWorkProcessor<'a> {
             id: 0,
             log: false,
             maximum_points: Arc::new(RwLock::new((0, GameState::new(board)))),
+            exploration_steps: Arc::new(AtomicCell::new(0)),
+            scoring_steps: Arc::new(AtomicCell::new(0)),
         };
     }
     fn score_tracks(&self, state: &GameState) -> u32 {
@@ -31,9 +36,9 @@ impl<'a> MostPointWorkProcessor<'a> {
                 2 => 2,
                 3 => 4,
                 4 => 7,
-                5 => 10,
-                6 => 21,
-                _ => panic!("Invalid length"),
+                6 => 15,
+                8 => 21,
+                _ => panic!("Invalid length in score_tracks"),
             }
         }
         return points;
@@ -43,6 +48,11 @@ impl<'a> MostPointWorkProcessor<'a> {
     }
 
     pub fn into_maximum(self) -> (u32, GameState<'a>) {
+        println!(
+            "Exploration steps: {}",
+            self.exploration_steps.as_ref().load()
+        );
+        println!("Scoring steps: {}", self.scoring_steps.as_ref().load());
         let max = Arc::<RwLock<(u32, GameState<'a>)>>::try_unwrap(self.maximum_points).unwrap();
         return max.into_inner().unwrap();
         //return self.maximum_points.try_unwrap();
@@ -83,6 +93,7 @@ impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
                 }
             }
             Work::Explore(gs) => {
+                self.exploration_steps.as_ref().fetch_add(1);
                 let mut routes_to_ignore = vec![];
                 let neighbors = gs.neighboring_routes();
                 let mut has_explored = false;
@@ -108,6 +119,7 @@ impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
                 }
             }
             Work::EvaluateScore(gs) => {
+                self.scoring_steps.as_ref().fetch_add(1);
                 let total_score = self.score_tracks(&gs) + self.score_missions(&gs);
                 if self.log {
                     println!("... Score {:?} = {} pts", gs, total_score);
