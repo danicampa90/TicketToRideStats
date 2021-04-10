@@ -1,5 +1,6 @@
 use crate::board::Board;
 use crate::gamestate::GameState;
+use crate::task_system::WorkProcessingResult;
 use crate::task_system::WorkProcessor;
 use crossbeam::atomic::AtomicCell;
 
@@ -72,7 +73,7 @@ impl<'a> Work<'a> {
     }
 }
 impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
-    fn process(self: &Self, w: Work<'a>) -> Vec<Work<'a>> {
+    fn process(self: &Self, w: Work<'a>) -> WorkProcessingResult<Work<'a>> {
         let mut tasks = vec![];
         if self.log {
             println!(">{:?}", w);
@@ -137,7 +138,7 @@ impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
                 }
             }
         }
-        return tasks;
+        return WorkProcessingResult::AddWork(tasks);
     }
 
     fn set_id(&mut self, id: usize) {

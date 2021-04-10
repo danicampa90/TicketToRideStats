@@ -1,3 +1,4 @@
+use crate::task_system::WorkProcessingResult;
 use crate::task_system::WorkProcessor;
 
 #[derive(Clone)]
@@ -15,14 +16,17 @@ pub enum DebugWork {
     PrintDebug(i32),
 }
 impl WorkProcessor<DebugWork> for DebugWorkProcessor {
-    fn process(self: &Self, w: DebugWork) -> Vec<DebugWork> {
+    fn process(self: &Self, w: DebugWork) -> WorkProcessingResult<DebugWork> {
         match w {
             DebugWork::PrintDebug(i) => {
                 println!("[{}]: {}", self.id, i);
                 return if i < 20 {
-                    vec![DebugWork::PrintDebug(i + 1), DebugWork::PrintDebug(i + 2)]
+                    WorkProcessingResult::AddWork(vec![
+                        DebugWork::PrintDebug(i + 1),
+                        DebugWork::PrintDebug(i + 2),
+                    ])
                 } else {
-                    vec![]
+                    WorkProcessingResult::AddWork(vec![])
                 };
             }
         }
