@@ -11,8 +11,9 @@ pub struct MostPointCheckpointer {}
 
 impl<'a> Checkpointer<Work<'a>> for MostPointCheckpointer {
     fn checkpoint(&self, work: &Vec<Work<'a>>) {
-        println!("Checkpointing: {} items queued.", work.len());
-        std::thread::sleep_ms(100);
+        println!("Checkpointing: {} tasks queued.", work.len());
+        //std::thread::sleep_ms(1000);
+        println!("TODO: not implemented!");
         println!("Checkpoint finished");
     }
 }
@@ -130,7 +131,7 @@ impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
                 }
             }
             Work::EvaluateScore(gs) => {
-                self.scoring_steps.as_ref().fetch_add(1);
+                let scoring_steps = self.scoring_steps.as_ref().fetch_add(1);
                 let total_score = self.score_tracks(&gs) + self.score_missions(&gs);
                 if self.log {
                     println!("... Score {:?} = {} pts", gs, total_score);
@@ -145,6 +146,9 @@ impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
                         println!("Set new max to {} points {:?}", total_score, gs);
                         (*max_writable) = (total_score, gs);
                     }
+                }
+                if scoring_steps % 10000000 == 0 {
+                    return WorkProcessingResult::AddWorkAndCheckpoint(tasks);
                 }
             }
         }

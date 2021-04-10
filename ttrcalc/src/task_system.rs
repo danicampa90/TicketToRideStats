@@ -17,7 +17,7 @@ where
     T: Send,
 {
     AddWork(Vec<T>),
-    Checkpoint,
+    AddWorkAndCheckpoint(Vec<T>),
     Interrupt,
 }
 
@@ -141,7 +141,6 @@ where
             None => Err(()),
             Some(connection) => {
                 let command = connection.receiver.recv().unwrap();
-                println!("Recv mgmt command: {:?}", command);
                 connection.sender.send(ManagementResponse::Ack).unwrap();
                 Ok((command, connection))
             }
@@ -207,21 +206,17 @@ where
                 if let Ok((mgmt_cmd, mgmt_conn)) = self.check_fetch_management_command() {
                     match mgmt_cmd {
                         ManagementCommand::Interrupt => {
-                            print!("Processing interrupt");
                             self.waiting_workers.fetch_add(1);
                             function.done();
                             mgmt_conn.sender.send(ManagementResponse::Done).unwrap();
                             return;
                         }
                         ManagementCommand::WaitCheckpoint => {
-                            print!("Processing checkpointWait");
-                            function.sleep(0);
                             assert!(
                                 mgmt_conn.receiver.recv().unwrap() == ManagementCommand::Continue
                             );
                             mgmt_conn.sender.send(ManagementResponse::Ack).unwrap();
                             mgmt_conn.sender.send(ManagementResponse::Done).unwrap();
-                            function.resume(0);
                         }
                         _ => panic!("Unrecognized command"),
                     }
@@ -244,7 +239,8 @@ where
                         print!("Stop successful");
                         return;
                     }
-                    WorkProcessingResult::Checkpoint => {
+                    WorkProcessingResult::AddWorkAndCheckpoint(work) => {
+                        self.push_tasks(work, &worker);
                         print!("Requesting pause for checkpointing.");
                         let others_conns = self
                             .send_management_task_to_all_others(ManagementCommand::WaitCheckpoint);

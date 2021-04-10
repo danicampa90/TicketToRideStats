@@ -16,7 +16,7 @@ use parser::parse_routes;
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() {
-    let mut game = Board::new(20);
+    let mut game = Board::new(30);
     parse_routes("london_tracks.csv", &mut game);
     //parse_routes("europe_tracks.csv", &mut game);
 
