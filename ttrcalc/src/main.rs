@@ -9,7 +9,7 @@ mod task_system;
 use board::Board;
 use debug_processor::{DebugWork, DebugWorkProcessor};
 use gamestate::GameState;
-use mostpoint_processor::{MostPointWorkProcessor, Work};
+use mostpoint_processor::{MostPointCheckpointer, MostPointWorkProcessor, Work};
 use parser::parse_routes;
 
 #[global_allocator]
@@ -20,7 +20,7 @@ fn main() {
     parse_routes("london_tracks.csv", &mut game);
     //parse_routes("europe_tracks.csv", &mut game);
 
-    let mut scheduler = task_system::Scheduler::new(16);
+    let mut scheduler = task_system::Scheduler::new(16, MostPointCheckpointer {});
     scheduler.push_task(Work::Start);
     let processor = MostPointWorkProcessor::new(&game);
     scheduler.run(&processor);

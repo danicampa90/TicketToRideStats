@@ -1,11 +1,21 @@
 use crate::board::Board;
 use crate::gamestate::GameState;
 use crate::task_system::WorkProcessingResult;
-use crate::task_system::WorkProcessor;
+use crate::task_system::{Checkpointer, WorkProcessor};
 use crossbeam::atomic::AtomicCell;
 
 use std::cell::RefCell;
 use std::sync::{Arc, RwLock};
+
+pub struct MostPointCheckpointer {}
+
+impl<'a> Checkpointer<Work<'a>> for MostPointCheckpointer {
+    fn checkpoint(&self, work: &Vec<Work<'a>>) {
+        println!("Checkpointing: {} items queued.", work.len());
+        std::thread::sleep_ms(100);
+        println!("Checkpoint finished");
+    }
+}
 
 #[derive(Clone)]
 pub struct MostPointWorkProcessor<'a> {
@@ -150,7 +160,9 @@ impl<'a> WorkProcessor<Work<'a>> for MostPointWorkProcessor<'a> {
     fn sleep(&self, oth: usize) {
         println!("Thread {} is sleeping", self.id);
     }
-    fn resume(&self, oth: usize) {}
+    fn resume(&self, oth: usize) {
+        println!("Thread {} is resuming", self.id);
+    }
     /*
     fn set_id(&mut self, id: usize) {}
     fn done(&self) {}
