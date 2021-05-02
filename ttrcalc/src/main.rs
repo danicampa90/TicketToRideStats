@@ -20,7 +20,7 @@ fn main() {
     parse_routes("london_tracks.csv", &mut game);
     //parse_routes("europe_tracks.csv", &mut game);
 
-    let mut scheduler = task_system::Scheduler::new(16, MostPointCheckpointer {});
+    let mut scheduler = task_system::Scheduler::new(16, MostPointCheckpointer::new(&game));
     scheduler.push_task(Work::Start);
     let processor = MostPointWorkProcessor::new(&game);
     scheduler.run(&processor);

@@ -44,6 +44,10 @@ impl Board {
     pub fn nr_routes(&self) -> usize {
         self.routes.len()
     }
+
+    pub fn city_names(&self) -> &Vec<String> {
+        &self.city_names
+    }
     pub fn city_id(&self, name: &str) -> Option<usize> {
         for index in 0..self.city_names.len() {
             if self.city_names[index] == name {

@@ -35,6 +35,15 @@ impl<'a> GameState<'a> {
     pub fn built_routes(&self) -> &Vec<bool> {
         &self.built_routes
     }
+    pub fn routes_to_ignore(&self) -> &Vec<bool> {
+        &self.routes_to_ignore
+    }
+    pub fn cities_reached(&self) -> &Vec<usize> {
+        &self.cities_reached
+    }
+    pub fn remaining_trains(&self) -> u32 {
+        self.remaining_trains
+    }
     pub fn new_state_with_route_id(
         &self,
         route: usize,
