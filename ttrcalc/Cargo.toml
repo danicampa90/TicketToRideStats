@@ -11,6 +11,7 @@ crossbeam = "0.8"
 crossbeam-utils = "0.8"
 byteorder = "1"
 mimalloc = { version = "0.1.17", default-features = false }
+ttrmodels = {path= "ttrmodels"}
 
 [profile.release]
 lto = "fat"

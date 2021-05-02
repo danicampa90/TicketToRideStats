@@ -1,16 +1,14 @@
-mod board;
+mod checkpointing;
 mod debug_processor;
-mod gamestate;
 mod mostpoint_processor;
-mod parser;
-mod route;
 mod task_system;
 
-use board::Board;
+use checkpointing::MostPointCheckpointer;
 use debug_processor::{DebugWork, DebugWorkProcessor};
-use gamestate::GameState;
-use mostpoint_processor::{MostPointCheckpointer, MostPointWorkProcessor, Work};
-use parser::parse_routes;
+use mostpoint_processor::{MostPointWorkProcessor, Work};
+use ttrmodels::parse_routes;
+use ttrmodels::Board;
+use ttrmodels::GameState;
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;

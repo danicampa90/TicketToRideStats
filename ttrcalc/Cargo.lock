@@ -156,4 +156,9 @@ dependencies = [
  "crossbeam",
  "crossbeam-utils",
  "mimalloc",
+ "ttrmodels",
 ]
+
+[[package]]
+name = "ttrmodels"
+version = "0.1.0"
