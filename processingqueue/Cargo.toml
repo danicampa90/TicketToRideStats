@@ -1,9 +1,16 @@
 [package]
 name = "processingqueue"
 version = "0.1.0"
-authors = ["Your Name <you@example.com>"]
+authors = ["Daniele Campana <danicampa90@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+crossbeam = "0.8"
+crossbeam-utils = "0.8"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"

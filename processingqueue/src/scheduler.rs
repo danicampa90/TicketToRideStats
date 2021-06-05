@@ -1,82 +1,49 @@
+use crate::management_interrupt::ManagementCommand;
+use crate::management_interrupt::ManagementConnection;
+use crate::management_interrupt::ManagementResponse;
+use crate::InterruptHandler;
+use crate::WorkProcessingResult;
+use crate::WorkProcessor;
 use crossbeam::atomic::AtomicCell;
 use crossbeam::deque::{Injector, Steal, Stealer, Worker};
 use crossbeam::queue::ArrayQueue;
 use crossbeam_utils::thread;
 use std::iter;
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use std::sync::Arc;
 
-pub trait Checkpointer<T>
+pub struct Scheduler<T>
 where
     T: Send,
 {
-    fn checkpoint(&self, work: &Vec<T>);
-}
-
-pub enum WorkProcessingResult<T>
-where
-    T: Send,
-{
-    AddWork(Vec<T>),
-    AddWorkAndCheckpoint(Vec<T>),
-    Interrupt,
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-enum ManagementCommand {
-    WaitCheckpoint,
-    Continue,
-    Interrupt,
-}
-#[derive(Clone, PartialEq, Eq, Debug)]
-enum ManagementResponse {
-    Ack,
-    Done,
-}
-
-struct ManagementConnection {
-    sender: SyncSender<ManagementResponse>,
-    receiver: Receiver<ManagementCommand>,
-}
-
-pub trait WorkProcessor<T>
-where
-    T: Send,
-{
-    fn set_id(&mut self, id: usize);
-    fn sleep(&self, oth: usize);
-    fn resume(&self, oth: usize);
-    fn done(&self);
-    fn process(&self, w: T) -> WorkProcessingResult<T>;
-}
-
-pub struct Scheduler<T, TCheckpointer>
-where
-    T: Send,
-    TCheckpointer: Checkpointer<T> + Sync,
-{
-    checkpointer: TCheckpointer,
     global: Injector<T>,
     waiting_workers: AtomicCell<usize>,
     nr_workers: usize,
     management_task: ArrayQueue<ManagementConnection>,
 }
 
-impl<T, TCheckpointer> Scheduler<T, TCheckpointer>
+impl<T> Scheduler<T>
 where
     T: Send,
-    TCheckpointer: Checkpointer<T> + Sync,
 {
-    pub fn new(nr_workers: usize, checkpointer: TCheckpointer) -> Scheduler<T, TCheckpointer> {
-        return Scheduler {
+    pub fn new(nr_workers: usize) -> Scheduler<T> {
+        return Scheduler::<T> {
             global: Injector::new(),
             waiting_workers: AtomicCell::from(0),
             nr_workers: nr_workers,
             management_task: ArrayQueue::new(nr_workers),
-            checkpointer: checkpointer,
         };
     }
 
-    pub fn run<TProc: WorkProcessor<T> + Clone + Send>(&mut self, processor: &TProc) {
+    pub fn run<
+        TInterrupt,
+        TProc: WorkProcessor<T> + Clone + Send,
+        TManagementProcessor: InterruptHandler<TInterrupt, T> + Send + Sync,
+    >(
+        &mut self,
+        processor: &TProc,
+        management_processor: TManagementProcessor,
+    ) {
         // reset state
         while self.management_task.pop().is_some() {}
 
@@ -95,7 +62,7 @@ where
                 proc.set_id(worker_id);
 
                 s.spawn(|_| {
-                    self.single_thread(proc, worker, &stealers);
+                    self.single_thread(proc, worker, &stealers, &management_processor);
                 });
                 worker_id += 1;
             }
@@ -184,7 +151,8 @@ where
             all_work.push(work);
         }
         // checkpoint
-        self.checkpointer.checkpoint(&all_work);
+        //self.checkpointer.checkpoint(&all_work);
+unimplemented!("checkpointer above should be renamed and re-enabled")
 
         // push back all the work items into the global queue.
         for item in all_work.into_iter() {
@@ -192,22 +160,28 @@ where
         }
     }
 
-    pub fn single_thread<TProc: WorkProcessor<T>>(
+    pub fn single_thread<
+        TInterrupt,
+        TProc: WorkProcessor<T>,
+        TManagementProcessor: InterruptHandler<TInterrupt, T>,
+    >(
         &self,
         function: TProc,
         worker: Worker<T>,
         stealers: &Vec<Stealer<T>>,
+        management_processor: &TManagementProcessor,
     ) {
         // if we are done, then exit
         let backoff = crossbeam::utils::Backoff::new();
         loop {
-            // process as much work as possible
+            // process as much work as possible before sleeping
             while let Some(task) = self.pop_task(&worker, stealers) {
+                // handle management commands
                 if let Ok((mgmt_cmd, mgmt_conn)) = self.check_fetch_management_command() {
                     match mgmt_cmd {
                         ManagementCommand::Interrupt => {
                             self.waiting_workers.fetch_add(1);
-                            function.done();
+                            function.quit();
                             mgmt_conn.sender.send(ManagementResponse::Done).unwrap();
                             return;
                         }
@@ -221,7 +195,11 @@ where
                         _ => panic!("Unrecognized command"),
                     }
                 }
+
+                // call the processor
                 let result = function.process(task);
+
+                // process the result of the processing
                 match result {
                     WorkProcessingResult::AddWork(work) => self.push_tasks(work, &worker),
                     WorkProcessingResult::Interrupt => {
@@ -235,7 +213,7 @@ where
                             .all(|val| val == ManagementResponse::Done);
                         assert!(all_done);
                         self.waiting_workers.fetch_add(1);
-                        function.done();
+                        function.quit();
                         print!("Stop successful");
                         return;
                     }
@@ -257,16 +235,17 @@ where
                 }
             }
 
-            // mark as waiting, wait a bit and then wakeup
+            // mark as waiting, wait a bit and then wakeup. other threads might have added some stuff to process.
             let other_waiting_threads = self.waiting_workers.fetch_add(1);
-            function.sleep(other_waiting_threads);
+            let action = function.no_work_available();
+            // TODO: do something with action.
+            unimplemented!("action now handled");
             backoff.snooze();
             let other_waiting_threads = self.waiting_workers.fetch_sub(1);
-            function.resume(other_waiting_threads);
             // if everybody was waiting then we are done. Exit
             if other_waiting_threads == self.nr_workers {
                 self.waiting_workers.fetch_add(1);
-                function.done();
+                function.quit();
                 return;
             }
         }
